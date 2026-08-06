@@ -84,6 +84,8 @@ function Header() {
   )
 }
 
+import AuthGate from './components/AuthGate'
+
 export default function App() {
   return (
     <AuthProvider>
@@ -91,12 +93,15 @@ export default function App() {
         <Header />
         <StepIndicator />
         <Routes>
+          {/* Public Home Landing */}
           <Route path="/" element={<HomePage />} />
-          <Route path="/create" element={<CreatePage />} />
-          <Route path="/join" element={<JoinPage />} />
-          <Route path="/room/:code" element={<RoomPage />} />
-          <Route path="/pick/:code" element={<PickerPage />} />
-          <Route path="/summary/:code" element={<SummaryPage />} />
+          
+          {/* Protected Routes — Require Sign In when accessed */}
+          <Route path="/create" element={<AuthGate><CreatePage /></AuthGate>} />
+          <Route path="/join" element={<AuthGate><JoinPage /></AuthGate>} />
+          <Route path="/room/:code" element={<AuthGate><RoomPage /></AuthGate>} />
+          <Route path="/pick/:code" element={<AuthGate><PickerPage /></AuthGate>} />
+          <Route path="/summary/:code" element={<AuthGate><SummaryPage /></AuthGate>} />
           {/* Fallback */}
           <Route path="*" element={<HomePage />} />
         </Routes>

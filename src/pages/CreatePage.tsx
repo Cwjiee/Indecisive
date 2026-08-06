@@ -17,9 +17,12 @@ const inputStyles = {
   },
 }
 
+import { useAuth } from '../context/AuthContext'
+
 export default function CreatePage() {
   const navigate = useNavigate()
-  const [name, setName] = useState(getStoredName)
+  const { user } = useAuth()
+  const [name, setName] = useState(() => user?.displayName || getStoredName())
   const [hangoutName, setHangoutName] = useState('')
   const [isCreating, setIsCreating] = useState(false)
   const [nameError, setNameError] = useState<string | null>(null)

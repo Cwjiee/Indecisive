@@ -14,9 +14,12 @@ const inputStyles = {
   },
 }
 
+import { useAuth } from '../context/AuthContext'
+
 export default function JoinPage() {
   const navigate = useNavigate()
-  const [name, setName] = useState(getStoredName)
+  const { user } = useAuth()
+  const [name, setName] = useState(() => user?.displayName || getStoredName())
   const [joinCode, setJoinCode] = useState('')
   const [isSearching, setIsSearching] = useState(false)
   const [searchError, setSearchError] = useState<string | null>(null)

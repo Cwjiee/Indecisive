@@ -1,8 +1,6 @@
 import { db } from '../firebase';
-import { doc, setDoc, getDoc, updateDoc, arrayUnion, onSnapshot } from 'firebase/firestore';
+import { doc, setDoc, getDoc, updateDoc, deleteDoc, arrayUnion, onSnapshot, collection, getDocs } from 'firebase/firestore';
 import { type RoomData, type Participant, generateRoomCode } from './room';
-
-import { collection, getDocs } from 'firebase/firestore';
 
 /**
  * Creates a new room document in Firestore.
@@ -194,6 +192,15 @@ export async function finalizeRoomDateInDb(
   const code = roomCode.toUpperCase();
   const roomRef = doc(db, 'rooms', code);
   await updateDoc(roomRef, { finalDate: finalDate || null });
+}
+
+/**
+ * Deletes a room document from Firestore.
+ */
+export async function deleteRoomFromDb(roomCode: string): Promise<void> {
+  const code = roomCode.toUpperCase();
+  const roomRef = doc(db, 'rooms', code);
+  await deleteDoc(roomRef);
 }
 
 

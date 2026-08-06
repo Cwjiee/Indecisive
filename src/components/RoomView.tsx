@@ -7,7 +7,7 @@ import {
   datesToStrings,
 } from '../utils/room'
 import { getStoredName, setStoredName } from '../utils/session'
-import { finalizeRoomDateInDb } from '../utils/db'
+import { finalizeRoomDateInDb, deleteRoomFromDb } from '../utils/db'
 
 const MONTH_NAMES = [
   'January','February','March','April','May','June',
@@ -33,6 +33,14 @@ export default function RoomView({ room, onAddDates, onGoHome, onEditParticipant
   // Final Decision state
   const [pendingFinalizeDate, setPendingFinalizeDate] = useState<Date | null>(null)
   const [isFinalizing, setIsFinalizing] = useState(false)
+
+  // Delete Hangout state
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
+
+  const isCreator = Boolean(
+    user && (room.creatorId === user.uid || (room.participants[0]?.userId === user.uid))
+  )
 
   const overlap = getOverlapDates(room.participants)
   const overlapDates = stringsToDate(Array.from(overlap)).sort((a, b) => a.getTime() - b.getTime())
@@ -92,8 +100,48 @@ export default function RoomView({ room, onAddDates, onGoHome, onEditParticipant
     }
   }
 
+  const handleDeleteRoom = async () => {
+    setIsDeleting(true)
+    try {
+      await deleteRoomFromDb(room.code)
+      onGoHome()
+    } catch (e) {
+      console.error('Error deleting room:', e)
+      alert('Failed to delete hangout. Please try again.')
+    } finally {
+      setIsDeleting(false)
+      setShowDeleteModal(false)
+    }
+  }
+
   return (
     <div className="room-view">
+      {/* Delete Room Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="edit-disclaimer-overlay" onClick={() => setShowDeleteModal(false)}>
+          <div className="edit-disclaimer-modal" onClick={e => e.stopPropagation()}>
+            <div className="edit-disclaimer-icon">🗑️</div>
+            <div className="edit-disclaimer-title">Delete this hangout?</div>
+            <div className="edit-disclaimer-body">
+              Are you sure you want to permanently delete <strong>{room.name || room.code}</strong>? This action cannot be undone.
+            </div>
+            <div className="edit-disclaimer-actions">
+              <button className="back-btn" onClick={() => setShowDeleteModal(false)}>
+                Cancel
+              </button>
+              <button
+                className="continue-btn"
+                onClick={handleDeleteRoom}
+                disabled={isDeleting}
+                style={{ background: '#b84040' }}
+              >
+                {isDeleting ? 'Deleting…' : 'Delete Hangout 🗑️'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Final Decision Confirmation Modal */}
       {pendingFinalizeDate && (
         <div className="edit-disclaimer-overlay" onClick={() => setPendingFinalizeDate(null)}>
@@ -138,11 +186,33 @@ export default function RoomView({ room, onAddDates, onGoHome, onEditParticipant
 
       {/* Room header */}
       <div className="room-header">
-        <div className="room-code-badge">
-          <span className="room-code-badge-label">Room</span>
-          <span className="room-code-badge-code">{room.code}</span>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', position: 'relative' }}>
+          <div className="room-code-badge" style={{ marginBottom: 0 }}>
+            <span className="room-code-badge-label">Room</span>
+            <span className="room-code-badge-code">{room.code}</span>
+          </div>
+          {isCreator && (
+            <button
+              onClick={() => setShowDeleteModal(true)}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: '#b84040',
+                fontSize: '13px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                padding: '4px 8px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px',
+              }}
+              title="Delete this hangout"
+            >
+              🗑️ Delete
+            </button>
+          )}
         </div>
-        <h1 className="room-title">
+        <h1 className="room-title" style={{ marginTop: '12px' }}>
           {room.name ? room.name : 'When can everyone hang?'}
         </h1>
         <p className="room-subtitle">
