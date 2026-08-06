@@ -40,9 +40,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const result = await signInWithPopup(auth, googleProvider)
       return result.user
-    } catch (e) {
+    } catch (e: any) {
       console.error('Google sign-in error:', e)
-      alert('Google Sign-In requires VITE_FIREBASE_API_KEY in your .env file.')
+      alert(`Google Sign-In failed: ${e?.message || e}`)
       return null
     }
   }
