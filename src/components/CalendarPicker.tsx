@@ -43,15 +43,67 @@ export default function CalendarPicker({
 
   const dateToKey = (d: Date | Dayjs) => dayjs(d).format('YYYY-MM-DD')
 
-  // Global mouseup listener to end drag even if mouse released outside calendar
+  // Track calendar container DOM ref for touch event handling
+  const calendarContainerRef = useRef<HTMLDivElement>(null)
+
+  // Global touch & mouse release listeners
   useEffect(() => {
-    const handleMouseUp = () => {
+    const handleEnd = () => {
       isDragging.current = false
       dragMode.current = null
     }
-    window.addEventListener('mouseup', handleMouseUp)
-    return () => window.removeEventListener('mouseup', handleMouseUp)
-  }, [])
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (!isDragging.current || !dragMode.current || !calendarContainerRef.current) return
+
+      const touch = e.touches[0]
+      if (!touch) return
+
+      const target = document.elementFromPoint(touch.clientX, touch.clientY)
+      if (!target) return
+
+      // Find date cell element with data-date attribute
+      const dayCell = target.closest('[data-date-key]') as HTMLElement | null
+      if (!dayCell) return
+
+      const dateStr = dayCell.getAttribute('data-date-key')
+      const isDisabled = dayCell.getAttribute('data-disabled') === 'true'
+      if (!dateStr || isDisabled) return
+
+      const targetKey = dateStr
+      const isCurrentlySelected = selectedDatesRef.current.some(sd => dateToKey(sd) === targetKey)
+
+      if (dragMode.current === 'select' && !isCurrentlySelected) {
+        const d = dayjs(dateStr).toDate()
+        const newDates = [...selectedDatesRef.current, d]
+        onChangeSelectedDates(newDates)
+      } else if (dragMode.current === 'deselect' && isCurrentlySelected) {
+        const newDates = selectedDatesRef.current.filter(sd => dateToKey(sd) !== targetKey)
+        onChangeSelectedDates(newDates)
+      }
+
+      // Prevent scrolling page while actively dragging on calendar
+      if (e.cancelable) e.preventDefault()
+    }
+
+    window.addEventListener('mouseup', handleEnd)
+    window.addEventListener('touchend', handleEnd)
+    window.addEventListener('touchcancel', handleEnd)
+
+    const container = calendarContainerRef.current
+    if (container) {
+      container.addEventListener('touchmove', handleTouchMove, { passive: false })
+    }
+
+    return () => {
+      window.removeEventListener('mouseup', handleEnd)
+      window.removeEventListener('touchend', handleEnd)
+      window.removeEventListener('touchcancel', handleEnd)
+      if (container) {
+        container.removeEventListener('touchmove', handleTouchMove)
+      }
+    }
+  }, [onChangeSelectedDates])
 
   // DatePicker passes dayjs objects internally — normalise to native Date[] first
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -64,7 +116,7 @@ export default function CalendarPicker({
     }
   }
 
-  const handleDateMouseDown = (d: Dayjs, isDisabled: boolean) => {
+  const handleDateStart = (d: Dayjs, isDisabled: boolean) => {
     if (isDisabled) return
     isDragging.current = true
 
@@ -124,12 +176,17 @@ export default function CalendarPicker({
       cursor: isDisabled ? 'not-allowed' : 'pointer',
       transition: 'all 0.18s cubic-bezier(0.16, 1, 0.3, 1)',
       userSelect: 'none',
+      WebkitUserSelect: 'none',
+      touchAction: 'none',
     }
 
     return {
       disabled: isDisabled,
       style,
-      onMouseDown: () => handleDateMouseDown(d, isDisabled),
+      'data-date-key': dateToKey(d),
+      'data-disabled': isDisabled ? 'true' : 'false',
+      onMouseDown: () => handleDateStart(d, isDisabled),
+      onTouchStart: () => handleDateStart(d, isDisabled),
       onMouseEnter: () => handleDateMouseEnter(d, isDisabled),
     }
   }
@@ -137,7 +194,7 @@ export default function CalendarPicker({
   const displayMonth = new Date(year, month, 1)
 
   return (
-    <div className="main-card">
+    <div className="main-card" ref={calendarContainerRef}>
       {/* Month selector */}
       <div className="section-label">Select a month</div>
       <div className="month-selector-row">
@@ -231,9 +288,9 @@ export default function CalendarPicker({
 
       {/* Action bar */}
       <div className="action-bar">
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div className="action-bar-left">
           {onBack && (
-            <button className="back-btn" onClick={onBack} aria-label="Go back" style={{ marginRight: 4 }}>
+            <button className="back-btn action-bar-back-btn" onClick={onBack} aria-label="Go back">
               ←
             </button>
           )}
@@ -248,7 +305,7 @@ export default function CalendarPicker({
           )}
         </div>
         <button
-          className="continue-btn"
+          className="continue-btn action-bar-continue-btn"
           onClick={onContinue}
           disabled={count === 0}
           id="continue-btn"
