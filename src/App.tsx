@@ -50,7 +50,7 @@ function Header() {
         <div className="app-logo-icon">🗓️</div>
         <span className="app-logo-text">indecisive</span>
       </div>
-      <p className="app-tagline">figure out when to hang — together</p>
+      <p className="app-tagline">No Bojio!!!</p>
     </header>
   )
 }

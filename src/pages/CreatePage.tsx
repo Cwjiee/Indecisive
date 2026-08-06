@@ -71,7 +71,7 @@ export default function CreatePage() {
         <div className="section-label">Your name</div>
         <TextInput
           id="name-input"
-          placeholder="e.g. Alex"
+          placeholder="e.g. Ali"
           value={name}
           onChange={e => { setName(e.currentTarget.value); setNameError(null) }}
           onKeyDown={e => { if (e.key === 'Enter') handleCreate() }}
@@ -89,7 +89,7 @@ export default function CreatePage() {
         <div className="section-label">Hangout name <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0, opacity: 0.6 }}>(optional)</span></div>
         <TextInput
           id="hangout-name-input"
-          placeholder="e.g. Summer BBQ, Weekend Trip…"
+          placeholder="e.g. Homestay BBQ, Weekend Trip…"
           value={hangoutName}
           onChange={e => setHangoutName(e.currentTarget.value)}
           onKeyDown={e => { if (e.key === 'Enter') handleCreate() }}

@@ -170,16 +170,22 @@ export default function CalendarPicker({
         </div>
         <Switch
           checked={weekendsOnly}
-          onChange={() => {}}
-          color="orange"
+          onChange={onToggleWeekendsOnly}
           size="md"
           aria-label="Toggle weekends only"
           styles={{
+            root: {
+              pointerEvents: 'none',
+            },
             track: {
-              backgroundColor: weekendsOnly ? undefined : 'var(--bg-primary)',
+              cursor: 'pointer',
+              transition: 'background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease',
+              backgroundColor: weekendsOnly ? 'var(--accent-weekend)' : 'var(--bg-primary)',
               borderColor: weekendsOnly ? 'transparent' : 'var(--glass-border)',
               boxShadow: weekendsOnly ? '0 0 14px rgba(192,122,42,0.4)' : 'none',
-              cursor: 'pointer',
+            },
+            thumb: {
+              transition: 'transform 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
             },
           }}
         />

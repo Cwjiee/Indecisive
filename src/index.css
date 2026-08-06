@@ -287,16 +287,6 @@ body {
 .toggle-title { font-size: 14px; font-weight: 600; color: var(--text-primary); }
 .toggle-sub { font-size: 12px; color: var(--text-secondary); }
 
-/* Mantine Switch track */
-.mantine-Switch-track {
-  background: var(--bg-primary) !important;
-  border-color: var(--glass-border) !important;
-  cursor: pointer !important;
-}
-.mantine-Switch-input:checked + .mantine-Switch-track {
-  background: var(--accent-weekend) !important;
-  border-color: transparent !important;
-}
 
 /* ── Summary View ── */
 .summary-view {
