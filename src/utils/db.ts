@@ -140,6 +140,16 @@ export async function updateRoomParticipantsInDb(
   const code = roomCode.toUpperCase();
   const roomRef = doc(db, 'rooms', code);
   await updateDoc(roomRef, { participants });
+}/**
+ * Sets or updates the final chosen date for a room in Firestore.
+ */
+export async function finalizeRoomDateInDb(
+  roomCode: string,
+  finalDate: string | null
+): Promise<void> {
+  const code = roomCode.toUpperCase();
+  const roomRef = doc(db, 'rooms', code);
+  await updateDoc(roomRef, { finalDate: finalDate || null });
 }
 
 

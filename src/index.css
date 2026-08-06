@@ -1041,9 +1041,70 @@ body {
   animation: chipIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
+.overlap-chip-selectable {
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.overlap-chip-selectable:hover {
+  background: rgba(90, 138, 90, 0.22);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(90, 138, 90, 0.25);
+}
+
 .overlap-chip-day  { font-size: 10px; font-weight: 500; color: var(--accent-selected); text-transform: uppercase; letter-spacing: 0.5px; }
 .overlap-chip-num  { font-size: 22px; font-weight: 800; color: var(--accent-selected); line-height: 1.1; }
 .overlap-chip-month{ font-size: 10px; color: rgba(90,138,90,0.65); }
+.overlap-chip-lock { font-size: 9px; font-weight: 700; color: var(--accent-selected); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+
+/* Finalized banner */
+.finalized-banner {
+  padding: 20px;
+  background: rgba(139, 94, 60, 0.08);
+  border: 2px solid var(--accent-primary);
+  border-radius: var(--radius-lg);
+  margin-bottom: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 12px;
+  animation: bounceIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.finalized-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.finalized-icon { font-size: 28px; }
+
+.finalized-title {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--accent-primary);
+}
+
+.finalized-sub {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.finalized-date-display {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 12px 24px;
+  background: var(--bg-card);
+  border: 1px solid var(--accent-primary);
+  border-radius: var(--radius-md);
+  box-shadow: 0 4px 16px rgba(139, 94, 60, 0.15);
+}
+
+.finalized-day-name { font-size: 11px; font-weight: 600; text-transform: uppercase; color: var(--accent-secondary); letter-spacing: 1px; }
+.finalized-day-num  { font-size: 32px; font-weight: 800; color: var(--accent-primary); line-height: 1.1; }
+.finalized-month    { font-size: 12px; font-weight: 700; color: var(--text-primary); }
 
 /* Per-participant sections */
 .participant-section {

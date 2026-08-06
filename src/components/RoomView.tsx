@@ -4,8 +4,10 @@ import {
   PARTICIPANT_COLORS,
   getOverlapDates,
   stringsToDate,
+  datesToStrings,
 } from '../utils/room'
 import { getStoredName, setStoredName } from '../utils/session'
+import { finalizeRoomDateInDb } from '../utils/db'
 
 const MONTH_NAMES = [
   'January','February','March','April','May','June',
@@ -24,6 +26,11 @@ interface RoomViewProps {
 export default function RoomView({ room, onAddDates, onGoHome, onEditParticipant }: RoomViewProps) {
   const [userName, setUserName] = useState(() => getStoredName())
   const [pendingEdit, setPendingEdit] = useState<{ name: string; dates: string[] } | null>(null)
+  
+  // Final Decision state
+  const [pendingFinalizeDate, setPendingFinalizeDate] = useState<Date | null>(null)
+  const [isFinalizing, setIsFinalizing] = useState(false)
+
   const overlap = getOverlapDates(room.participants)
   const overlapDates = stringsToDate(Array.from(overlap)).sort((a, b) => a.getTime() - b.getTime())
 
@@ -40,8 +47,56 @@ export default function RoomView({ room, onAddDates, onGoHome, onEditParticipant
     setPendingEdit(null)
   }
 
+  const handleConfirmFinalize = async () => {
+    if (!pendingFinalizeDate) return
+    setIsFinalizing(true)
+    try {
+      const dateStr = datesToStrings([pendingFinalizeDate])[0]
+      await finalizeRoomDateInDb(room.code, dateStr)
+      setPendingFinalizeDate(null)
+    } catch (e) {
+      console.error('Error finalizing room date:', e)
+      alert('Failed to save final decision. Please try again.')
+    } finally {
+      setIsFinalizing(false)
+    }
+  }
+
+  const handleClearFinalDecision = async () => {
+    if (!confirm('Clear the finalized date and re-open date selection?')) return
+    setIsFinalizing(true)
+    try {
+      await finalizeRoomDateInDb(room.code, null)
+    } catch (e) {
+      console.error('Error clearing final decision:', e)
+    } finally {
+      setIsFinalizing(false)
+    }
+  }
+
   return (
     <div className="room-view">
+      {/* Final Decision Confirmation Modal */}
+      {pendingFinalizeDate && (
+        <div className="edit-disclaimer-overlay" onClick={() => setPendingFinalizeDate(null)}>
+          <div className="edit-disclaimer-modal" onClick={e => e.stopPropagation()}>
+            <div className="edit-disclaimer-icon">🎉</div>
+            <div className="edit-disclaimer-title">Confirm Final Hangout Date?</div>
+            <div className="edit-disclaimer-body">
+              Are you sure you want to set <strong>{DAY_SHORT[pendingFinalizeDate.getDay()]}, {SHORT_MONTH[pendingFinalizeDate.getMonth()]} {pendingFinalizeDate.getDate()}, {pendingFinalizeDate.getFullYear()}</strong> as the official date for this hangout?
+            </div>
+            <div className="edit-disclaimer-actions">
+              <button className="back-btn" onClick={() => setPendingFinalizeDate(null)}>
+                Cancel
+              </button>
+              <button className="continue-btn" onClick={handleConfirmFinalize} disabled={isFinalizing}>
+                {isFinalizing ? 'Saving…' : 'Lock in Date 🚀'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Edit Confirmation Modal */}
       {pendingEdit && (
         <div className="edit-disclaimer-overlay" onClick={() => setPendingEdit(null)}>
@@ -76,6 +131,58 @@ export default function RoomView({ room, onAddDates, onGoHome, onEditParticipant
           {room.participants.length} {room.participants.length === 1 ? 'person has' : 'people have'} shared their availability
         </p>
       </div>
+
+      {/* Finalized Banner if date is locked in */}
+      {room.finalDate && (() => {
+        const fDate = stringsToDate([room.finalDate])[0]
+        return (
+          <div className="finalized-banner">
+            <div className="finalized-header">
+              <span className="finalized-icon">🚀</span>
+              <div>
+                <div className="finalized-title">It's Official! Hangout Date Locked In</div>
+                <div className="finalized-sub">Everyone prepare for</div>
+              </div>
+            </div>
+            <div className="finalized-date-display">
+              <span className="finalized-day-name">{DAY_SHORT[fDate.getDay()]}</span>
+              <span className="finalized-day-num">{fDate.getDate()}</span>
+              <span className="finalized-month">{SHORT_MONTH[fDate.getMonth()]} {fDate.getFullYear()}</span>
+            </div>
+            <button className="regenerate-btn" onClick={handleClearFinalDecision} style={{ marginTop: '8px', color: 'var(--text-secondary)' }}>
+              ✏️ Re-open date selection
+            </button>
+          </div>
+        )
+      })()}
+
+      {/* Overlap section & Final Decision CTA */}
+      {overlapDates.length > 0 && !room.finalDate && (
+        <div className="overlap-section">
+          <div className="overlap-header">
+            <span className="overlap-icon">✨</span>
+            <div>
+              <div className="overlap-title">Everyone's free on {overlapDates.length} {overlapDates.length === 1 ? 'date' : 'dates'}!</div>
+              <div className="overlap-sub">Click a date below to lock it in as the final decision</div>
+            </div>
+          </div>
+          <div className="overlap-chips">
+            {overlapDates.map(date => (
+              <button
+                key={date.toISOString()}
+                className="overlap-chip overlap-chip-selectable"
+                onClick={() => setPendingFinalizeDate(date)}
+                title="Click to finalize this date"
+              >
+                <span className="overlap-chip-day">{DAY_SHORT[date.getDay()]}</span>
+                <span className="overlap-chip-num">{date.getDate()}</span>
+                <span className="overlap-chip-month">{SHORT_MONTH[date.getMonth()]}</span>
+                <span className="overlap-chip-lock">Lock in →</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Fair use warning banner */}
       {room.participants.length > 0 && (
@@ -140,27 +247,7 @@ export default function RoomView({ room, onAddDates, onGoHome, onEditParticipant
         </div>
       </div>
 
-      {/* Overlap section */}
-      {overlapDates.length > 0 && (
-        <div className="overlap-section">
-          <div className="overlap-header">
-            <span className="overlap-icon">✨</span>
-            <div>
-              <div className="overlap-title">Everyone's free on {overlapDates.length} {overlapDates.length === 1 ? 'date' : 'dates'}!</div>
-              <div className="overlap-sub">These are your best bets</div>
-            </div>
-          </div>
-          <div className="overlap-chips">
-            {overlapDates.map(date => (
-              <div key={date.toISOString()} className="overlap-chip">
-                <span className="overlap-chip-day">{DAY_SHORT[date.getDay()]}</span>
-                <span className="overlap-chip-num">{date.getDate()}</span>
-                <span className="overlap-chip-month">{SHORT_MONTH[date.getMonth()]}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+
 
       {/* Per-participant date lists below form */}
       {room.participants.length > 0 && (

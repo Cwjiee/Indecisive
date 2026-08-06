@@ -28,6 +28,7 @@ export interface RoomData {
   code: string          // 6-char readable code, e.g. "K3M9PX"
   name?: string         // optional human-readable room name e.g. "Summer BBQ"
   participants: Participant[]
+  finalDate?: string    // optional YYYYMMDD string for finalized hangout date
 }
 
 // ── Encoding / decoding ───────────────────────────────────────────────────────
