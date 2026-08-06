@@ -23,8 +23,11 @@ interface RoomViewProps {
   onEditParticipant: (name: string, dates: string[]) => void
 }
 
+import { useAuth } from '../context/AuthContext'
+
 export default function RoomView({ room, onAddDates, onGoHome, onEditParticipant }: RoomViewProps) {
-  const [userName, setUserName] = useState(() => getStoredName())
+  const { user } = useAuth()
+  const [userName, setUserName] = useState(() => getStoredName() || user?.displayName || '')
   const [pendingEdit, setPendingEdit] = useState<{ name: string; dates: string[] } | null>(null)
   
   // Final Decision state
@@ -34,11 +37,26 @@ export default function RoomView({ room, onAddDates, onGoHome, onEditParticipant
   const overlap = getOverlapDates(room.participants)
   const overlapDates = stringsToDate(Array.from(overlap)).sort((a, b) => a.getTime() - b.getTime())
 
+  // Check if current authenticated user has already submitted availability in this room
+  const currentUserParticipant = room.participants.find(
+    p => (user && p.userId === user.uid) || (userName && p.name.toLowerCase() === userName.toLowerCase())
+  )
+
   const handleAddDatesClick = () => {
-    const trimmed = userName.trim()
-    if (!trimmed) return
-    setStoredName(trimmed)
+    const nameToUse = userName.trim() || user?.displayName || 'You'
+    setStoredName(nameToUse)
     onAddDates()
+  }
+
+  const handleEditParticipantClick = (p: { name: string; dates: string[]; userId?: string }) => {
+    const isSelf = (user && p.userId === user.uid) || (userName && p.name.toLowerCase() === userName.toLowerCase())
+    if (isSelf) {
+      // Direct edit without modal for own dates
+      onEditParticipant(p.name, p.dates)
+    } else {
+      // Warning modal for editing someone else's dates
+      setPendingEdit({ name: p.name, dates: p.dates })
+    }
   }
 
   const handleConfirmEdit = () => {
@@ -239,10 +257,9 @@ export default function RoomView({ room, onAddDates, onGoHome, onEditParticipant
             onClick={handleAddDatesClick}
             id="add-my-dates-btn"
             style={{ width: '100%' }}
-            disabled={!userName.trim()}
           >
             <span aria-hidden="true">📅</span>
-            Add my availability
+            {currentUserParticipant ? 'Edit / Update my availability' : 'Add my availability'}
           </button>
         </div>
       </div>
@@ -256,6 +273,8 @@ export default function RoomView({ room, onAddDates, onGoHome, onEditParticipant
           {room.participants.map((p, pIdx) => {
             const color = PARTICIPANT_COLORS[pIdx % PARTICIPANT_COLORS.length]
             const dates = stringsToDate(p.dates).sort((a, b) => a.getTime() - b.getTime())
+
+            const isSelf = (user && p.userId === user.uid) || (userName && p.name.toLowerCase() === userName.toLowerCase())
 
             // Group by month
             const byMonth = new Map<string, Date[]>()
@@ -276,11 +295,13 @@ export default function RoomView({ room, onAddDates, onGoHome, onEditParticipant
                     className="participant-section-dot"
                     style={{ background: color.fill, boxShadow: `0 0 8px ${color.glow}` }}
                   />
-                  <span className="participant-section-name">{p.name}</span>
+                  <span className="participant-section-name">
+                    {p.name} {isSelf && <span style={{ fontSize: '11px', color: 'var(--accent-primary)', fontWeight: 600 }}>(You)</span>}
+                  </span>
                   <span className="participant-section-count" style={{ marginRight: '8px' }}>{dates.length} days</span>
                   <button
                     className="copy-btn"
-                    onClick={() => setPendingEdit({ name: p.name, dates: p.dates })}
+                    onClick={() => handleEditParticipantClick(p)}
                     style={{ padding: '3px 8px', fontSize: '11px', borderRadius: '4px' }}
                     aria-label={`Edit ${p.name}'s dates`}
                   >

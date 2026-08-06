@@ -1,26 +1,47 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getSavedRooms, getRoomFromDb } from '../utils/db'
+import { useAuth } from '../context/AuthContext'
+import { getSavedRooms, getRoomFromDb, getUserRoomsFromDb } from '../utils/db'
 import type { RoomData } from '../utils/room'
 
 export default function HomePage() {
   const navigate = useNavigate()
+  const { user } = useAuth()
 
   // Recent rooms
   const [recentRooms, setRecentRooms] = useState<RoomData[]>([])
   const [loadingRooms, setLoadingRooms] = useState(false)
 
   useEffect(() => {
-    const codes = getSavedRooms()
-    if (!codes.length) return
-    setLoadingRooms(true)
-    Promise.all(
-      codes.map(code => getRoomFromDb(code).catch(() => null))
-    ).then(results => {
-      setRecentRooms(results.filter(Boolean) as RoomData[])
-      setLoadingRooms(false)
-    })
-  }, [])
+    async function loadRooms() {
+      setLoadingRooms(true)
+      try {
+        if (user) {
+          // Fetch rooms directly from Firestore by Auth user ID
+          const dbRooms = await getUserRoomsFromDb(user.uid)
+          setRecentRooms(dbRooms)
+        } else {
+          // Fallback to localStorage for guest users
+          const codes = getSavedRooms()
+          if (!codes.length) {
+            setRecentRooms([])
+            setLoadingRooms(false)
+            return
+          }
+          const results = await Promise.all(
+            codes.map(code => getRoomFromDb(code).catch(() => null))
+          )
+          setRecentRooms(results.filter(Boolean) as RoomData[])
+        }
+      } catch (e) {
+        console.error('Error loading rooms:', e)
+      } finally {
+        setLoadingRooms(false)
+      }
+    }
+
+    loadRooms()
+  }, [user])
 
   return (
     <div className="home-choice-layout">

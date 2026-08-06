@@ -2,6 +2,8 @@ import { db } from '../firebase';
 import { doc, setDoc, getDoc, updateDoc, arrayUnion, onSnapshot } from 'firebase/firestore';
 import { type RoomData, type Participant, generateRoomCode } from './room';
 
+import { collection, getDocs } from 'firebase/firestore';
+
 /**
  * Creates a new room document in Firestore.
  * If preRoomCode is provided, it uses it. Otherwise, it generates a new one.
@@ -9,19 +11,28 @@ import { type RoomData, type Participant, generateRoomCode } from './room';
 export async function createRoomInDb(
   creatorName: string,
   dates: string[],
-  preRoomCode: string | null
+  preRoomCode: string | null,
+  userInfo?: { userId?: string; userEmail?: string }
 ): Promise<string> {
   const code = (preRoomCode || generateRoomCode()).toUpperCase();
   const roomRef = doc(db, 'rooms', code);
 
+  const creatorParticipant: Participant = {
+    name: creatorName,
+    dates,
+    ...(userInfo?.userId && { userId: userInfo.userId }),
+    ...(userInfo?.userEmail && { userEmail: userInfo.userEmail }),
+  };
+
   const initialRoom: RoomData = {
     code,
-    participants: [{ name: creatorName, dates }]
+    ...(userInfo?.userId && { creatorId: userInfo.userId }),
+    participants: [creatorParticipant],
   };
 
   await setDoc(roomRef, {
     ...initialRoom,
-    createdAt: new Date()
+    createdAt: new Date(),
   });
 
   return code;
@@ -33,15 +44,48 @@ export async function createRoomInDb(
 export async function joinRoomInDb(
   roomCode: string,
   participantName: string,
-  dates: string[]
+  dates: string[],
+  userInfo?: { userId?: string; userEmail?: string }
 ): Promise<void> {
   const code = roomCode.toUpperCase();
   const roomRef = doc(db, 'rooms', code);
-  const newParticipant: Participant = { name: participantName, dates };
+  const newParticipant: Participant = {
+    name: participantName,
+    dates,
+    ...(userInfo?.userId && { userId: userInfo.userId }),
+    ...(userInfo?.userEmail && { userEmail: userInfo.userEmail }),
+  };
 
   await updateDoc(roomRef, {
-    participants: arrayUnion(newParticipant)
+    participants: arrayUnion(newParticipant),
   });
+}
+
+/**
+ * Fetches all rooms from Firestore where the user is a participant or creator.
+ */
+export async function getUserRoomsFromDb(userId: string): Promise<RoomData[]> {
+  try {
+    const roomsRef = collection(db, 'rooms');
+    const snapshot = await getDocs(roomsRef);
+    const rooms: RoomData[] = [];
+    
+    snapshot.forEach((docSnap) => {
+      const data = docSnap.data() as RoomData;
+      const isParticipant = data.participants?.some(
+        (p) => p.userId === userId
+      );
+      const isCreator = data.creatorId === userId;
+      if (isParticipant || isCreator) {
+        rooms.push(data);
+      }
+    });
+
+    return rooms;
+  } catch (e) {
+    console.error('Error fetching user rooms from Firestore:', e);
+    return [];
+  }
 }
 
 /**

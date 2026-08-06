@@ -20,6 +20,8 @@ export function stringsToDate(strs: string[]): Date[] {
 // ── Room data types ───────────────────────────────────────────────────────────
 
 export interface Participant {
+  userId?: string
+  userEmail?: string
   name: string
   dates: string[] // YYYYMMDD
 }
@@ -27,6 +29,7 @@ export interface Participant {
 export interface RoomData {
   code: string          // 6-char readable code, e.g. "K3M9PX"
   name?: string         // optional human-readable room name e.g. "Summer BBQ"
+  creatorId?: string
   participants: Participant[]
   finalDate?: string    // optional YYYYMMDD string for finalized hangout date
 }

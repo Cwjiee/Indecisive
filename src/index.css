@@ -72,19 +72,35 @@ body {
   flex-direction: column;
   align-items: center;
   padding: 40px 20px 80px;
+  width: 100%;
 }
 
 .app-header {
-  text-align: center;
-  margin-bottom: 40px;
+  width: 100%;
+  max-width: 680px;
+  margin-bottom: 32px;
   animation: fadeInDown 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.header-top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  width: 100%;
+}
+
+.app-header-brand {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
 }
 
 .app-logo {
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  margin-bottom: 10px;
+  margin-bottom: 4px;
 }
 
 .app-logo-icon {
@@ -107,6 +123,79 @@ body {
 
 .app-tagline {
   font-size: 14px;
+  color: var(--text-secondary);
+}
+
+/* Header Auth Badge & Google Login Button */
+.header-auth-badge {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.user-profile-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-full);
+}
+
+.user-avatar {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.user-avatar-placeholder {
+  font-size: 14px;
+}
+
+.user-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  max-width: 120px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.auth-btn {
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  border-radius: var(--radius-md);
+  transition: all 0.2s ease;
+}
+
+.google-login-btn {
+  padding: 8px 14px;
+  background: var(--bg-card);
+  color: var(--text-primary);
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 2px 8px rgba(139, 109, 72, 0.1);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.google-login-btn:hover {
+  background: var(--bg-card-hover);
+  border-color: var(--glass-border-hover);
+}
+
+.logout-btn {
+  padding: 4px 8px;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 11px;
+}
+.logout-btn:hover {
   color: var(--text-secondary);
 }
 

@@ -50,7 +50,10 @@ function groupByMonth(dates: Date[]): MonthGroup[] {
   return Array.from(map.values())
 }
 
+import { useAuth } from '../context/AuthContext'
+
 export default function Summary({ dates, userName, preRoomCode, existingRoom, onBack, onGoHome, onViewRoom }: SummaryProps) {
+  const { user } = useAuth()
   const groups = groupByMonth(dates)
   const totalDates   = dates.length
 
@@ -70,23 +73,31 @@ export default function Summary({ dates, userName, preRoomCode, existingRoom, on
       setSaveError(null)
       try {
         const serialized = datesToStrings(dates)
+        const userInfo = user ? { userId: user.uid, userEmail: user.email || undefined } : undefined
+
         if (existingRoom) {
-          // Overwrite existing user's selection if they already exist, else append
+          // Overwrite existing user's selection by userId or name
           const updatedParticipants = [...existingRoom.participants]
           const existingIdx = updatedParticipants.findIndex(
-            p => p.name.toLowerCase() === userName.toLowerCase()
+            p => (user && p.userId === user.uid) || p.name.toLowerCase() === userName.toLowerCase()
           )
 
+          const newParticipantData = {
+            name: userName,
+            dates: serialized,
+            ...(user && { userId: user.uid, userEmail: user.email || undefined }),
+          }
+
           if (existingIdx !== -1) {
-            updatedParticipants[existingIdx] = { name: userName, dates: serialized }
+            updatedParticipants[existingIdx] = newParticipantData
           } else {
-            updatedParticipants.push({ name: userName, dates: serialized })
+            updatedParticipants.push(newParticipantData)
           }
 
           await updateRoomParticipantsInDb(existingRoom.code, updatedParticipants)
         } else {
           // Overwrites the empty room with the creator's selection
-          await createRoomInDb(userName, serialized, preRoomCode)
+          await createRoomInDb(userName, serialized, preRoomCode, userInfo)
         }
         saveRoomToHistory(activeRoomCode!)
         setSavedCode(activeRoomCode)
@@ -99,7 +110,7 @@ export default function Summary({ dates, userName, preRoomCode, existingRoom, on
     }
 
     autoSaveAvailability()
-  }, [activeRoomCode, userName, dates, existingRoom, preRoomCode])
+  }, [activeRoomCode, userName, dates, existingRoom, preRoomCode, user])
 
   const shareUrl = savedCode ? buildDbShareUrl(savedCode) : ''
 
