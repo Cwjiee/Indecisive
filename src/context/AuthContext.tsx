@@ -1,24 +1,29 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
-import { getRedirectResult, onAuthStateChanged, signInWithPopup, signInWithRedirect, signOut, type User } from 'firebase/auth'
+import { getRedirectResult, onAuthStateChanged, signInWithPopup, signOut, type User } from 'firebase/auth'
 import { auth, googleProvider } from '../firebase'
 
 interface AuthContextType {
   user: User | null
   loading: boolean
+  authError: string | null
   loginWithGoogle: () => Promise<User | null>
+  clearAuthError: () => void
   logout: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
   loading: true,
+  authError: null,
   loginWithGoogle: async () => null,
+  clearAuthError: () => {},
   logout: async () => {},
 })
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
+  const [authError, setAuthError] = useState<string | null>(null)
 
   useEffect(() => {
     try {
@@ -31,6 +36,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         })
         .catch((error) => {
           console.warn('Firebase Auth redirect result error:', error)
+          setAuthError('Google sign-in could not be completed. Please try again.')
         })
 
       const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -48,25 +54,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const loginWithGoogle = async () => {
+    setAuthError(null)
+
     try {
       const result = await signInWithPopup(auth, googleProvider)
       return result.user
     } catch (e: any) {
-      // Handle popup-blocked or popup-closed-by-browser by falling back to redirect method
+      // Keep the user in the app when the browser will not allow a popup. A
+      // redirect can send users to a provider error/404 page, so show recovery
+      // instructions here instead.
       if (
         e?.code === 'auth/popup-blocked' ||
         e?.code === 'auth/popup-closed-by-browser' ||
         e?.message?.includes('popup-blocked')
       ) {
-        console.warn('Popup blocked by browser. Falling back to redirect sign-in...')
-        try {
-          await signInWithRedirect(auth, googleProvider)
-          return null
-        } catch (redirectErr: any) {
-          console.error('Google redirect sign-in error:', redirectErr)
-          alert(`Google Sign-In failed: ${redirectErr?.message || redirectErr}`)
-          return null
-        }
+        console.warn('Google sign-in popup was blocked or closed:', e)
+        setAuthError('Your browser blocked the Google sign-in window. Allow popups for this site, then try again.')
+        return null
       }
 
       // Ignore user closing the popup manually without attempting sign-in
@@ -75,7 +79,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       console.error('Google sign-in error:', e)
-      alert(`Google Sign-In failed: ${e?.message || e}`)
+      setAuthError('Google sign-in failed. Please try again, or check your browser/network settings.')
       return null
     }
   }
@@ -89,7 +93,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, loginWithGoogle, logout }}>
+    <AuthContext.Provider value={{ user, loading, authError, loginWithGoogle, clearAuthError: () => setAuthError(null), logout }}>
       {children}
     </AuthContext.Provider>
   )
@@ -98,4 +102,3 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 export function useAuth() {
   return useContext(AuthContext)
 }
-

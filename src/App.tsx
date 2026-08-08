@@ -37,6 +37,25 @@ function StepIndicator() {
 
 import { AuthProvider, useAuth } from './context/AuthContext'
 
+function AuthFallback() {
+  const { authError, clearAuthError, loginWithGoogle } = useAuth()
+
+  if (!authError) return null
+
+  return (
+    <main className="auth-fallback" role="alert">
+      <div className="auth-fallback-icon" aria-hidden="true">🔐</div>
+      <div className="create-page-title">Google sign-in needs attention</div>
+      <p className="create-page-sub">{authError}</p>
+      <p className="auth-fallback-help">If you use private browsing, an ad blocker, or strict tracking protection, temporarily allow popups and cookies for this site.</p>
+      <div className="auth-fallback-actions">
+        <button className="continue-btn" onClick={loginWithGoogle}>Try again</button>
+        <button className="clear-btn" onClick={clearAuthError}>Continue without signing in</button>
+      </div>
+    </main>
+  )
+}
+
 function Header() {
   const navigate = useNavigate()
   const { pathname } = useLocation()
@@ -86,26 +105,38 @@ function Header() {
 
 import AuthGate from './components/AuthGate'
 
+function AppContent() {
+  const { authError } = useAuth()
+
+  return (
+    <div className="app">
+      <Header />
+      {authError ? <AuthFallback /> : (
+        <>
+          <StepIndicator />
+          <Routes>
+            {/* Public Home Landing */}
+            <Route path="/" element={<HomePage />} />
+
+            {/* Protected Routes — Require Sign In when accessed */}
+            <Route path="/create" element={<AuthGate><CreatePage /></AuthGate>} />
+            <Route path="/join" element={<AuthGate><JoinPage /></AuthGate>} />
+            <Route path="/room/:code" element={<AuthGate><RoomPage /></AuthGate>} />
+            <Route path="/pick/:code" element={<AuthGate><PickerPage /></AuthGate>} />
+            <Route path="/summary/:code" element={<AuthGate><SummaryPage /></AuthGate>} />
+            {/* Fallback */}
+            <Route path="*" element={<HomePage />} />
+          </Routes>
+        </>
+      )}
+    </div>
+  )
+}
+
 export default function App() {
   return (
     <AuthProvider>
-      <div className="app">
-        <Header />
-        <StepIndicator />
-        <Routes>
-          {/* Public Home Landing */}
-          <Route path="/" element={<HomePage />} />
-          
-          {/* Protected Routes — Require Sign In when accessed */}
-          <Route path="/create" element={<AuthGate><CreatePage /></AuthGate>} />
-          <Route path="/join" element={<AuthGate><JoinPage /></AuthGate>} />
-          <Route path="/room/:code" element={<AuthGate><RoomPage /></AuthGate>} />
-          <Route path="/pick/:code" element={<AuthGate><PickerPage /></AuthGate>} />
-          <Route path="/summary/:code" element={<AuthGate><SummaryPage /></AuthGate>} />
-          {/* Fallback */}
-          <Route path="*" element={<HomePage />} />
-        </Routes>
-      </div>
+      <AppContent />
     </AuthProvider>
   )
 }
