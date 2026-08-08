@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
 import { getRedirectResult, onAuthStateChanged, signInWithPopup, signOut, type User } from 'firebase/auth'
-import { auth, googleProvider } from '../firebase'
+import { setUserId } from 'firebase/analytics'
+import { auth, googleProvider, analytics } from '../firebase'
 
 interface AuthContextType {
   user: User | null
@@ -42,6 +43,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
         setUser(currentUser)
         setLoading(false)
+        // Link the authenticated user to GA4 analytics events
+        if (analytics) {
+          setUserId(analytics, currentUser?.uid ?? null)
+        }
       }, (error) => {
         console.warn('Firebase Auth state error:', error)
         setLoading(false)
