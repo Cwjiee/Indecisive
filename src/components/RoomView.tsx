@@ -38,6 +38,9 @@ export default function RoomView({ room, onAddDates, onGoHome, onEditParticipant
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
 
+  // Re-open date selection state
+  const [showReopenModal, setShowReopenModal] = useState(false)
+
   const isCreator = Boolean(
     user && (room.creatorId === user.uid || (room.participants[0]?.userId === user.uid))
   )
@@ -88,13 +91,14 @@ export default function RoomView({ room, onAddDates, onGoHome, onEditParticipant
     }
   }
 
-  const handleClearFinalDecision = async () => {
-    if (!confirm('Clear the finalized date and re-open date selection?')) return
+  const handleClearFinalDecision = async (): Promise<boolean> => {
     setIsFinalizing(true)
     try {
       await finalizeRoomDateInDb(room.code, null)
+      return true
     } catch (e) {
       console.error('Error clearing final decision:', e)
+      return false
     } finally {
       setIsFinalizing(false)
     }
@@ -136,6 +140,33 @@ export default function RoomView({ room, onAddDates, onGoHome, onEditParticipant
                 style={{ background: '#b84040' }}
               >
                 {isDeleting ? 'Deleting…' : 'Delete Hangout 🗑️'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Re-open Date Selection Confirmation Modal */}
+      {showReopenModal && (
+        <div className="edit-disclaimer-overlay" onClick={() => setShowReopenModal(false)}>
+          <div className="edit-disclaimer-modal" onClick={e => e.stopPropagation()}>
+            <div className="edit-disclaimer-title">Re-open date selection?</div>
+            <div className="edit-disclaimer-body">
+              This will clear the finalized date and let everyone update their availability again.
+            </div>
+            <div className="edit-disclaimer-actions">
+              <button className="back-btn" onClick={() => setShowReopenModal(false)} disabled={isFinalizing}>
+                Cancel
+              </button>
+              <button
+                className="continue-btn"
+                onClick={async () => {
+                  const reopened = await handleClearFinalDecision()
+                  if (reopened) setShowReopenModal(false)
+                }}
+                disabled={isFinalizing}
+              >
+                {isFinalizing ? 'Re-opening…' : 'Re-open selection'}
               </button>
             </div>
           </div>
@@ -235,7 +266,7 @@ export default function RoomView({ room, onAddDates, onGoHome, onEditParticipant
               <span className="finalized-day-num">{fDate.getDate()}</span>
               <span className="finalized-month">{SHORT_MONTH[fDate.getMonth()]} {fDate.getFullYear()}</span>
             </div>
-            <button className="regenerate-btn" onClick={handleClearFinalDecision} style={{ marginTop: '8px', color: 'var(--text-secondary)' }}>
+            <button className="regenerate-btn" onClick={() => setShowReopenModal(true)} style={{ marginTop: '8px', color: 'var(--text-secondary)' }}>
               Re-open date selection
             </button>
           </div>
