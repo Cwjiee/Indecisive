@@ -1,6 +1,6 @@
 import { useRef, useEffect } from 'react'
 import { DatePicker } from '@mantine/dates'
-import { Switch } from '@mantine/core'
+import { Checkbox, Switch } from '@mantine/core'
 import dayjs, { type Dayjs } from 'dayjs'
 
 const MONTH_NAMES = [
@@ -18,6 +18,8 @@ interface CalendarPickerProps {
   onPrevMonth: () => void
   onNextMonth: () => void
   onToggleWeekendsOnly: () => void
+  noDatesAvailable: boolean
+  onToggleNoDatesAvailable: () => void
   onChangeSelectedDates: (dates: Date[]) => void
   onClear: () => void
   onContinue: () => void
@@ -28,6 +30,7 @@ export default function CalendarPicker({
   year, month, weekendsOnly, selectedDates, today,
   isPrevMonthDisabled,
   onPrevMonth, onNextMonth, onToggleWeekendsOnly,
+  noDatesAvailable, onToggleNoDatesAvailable,
   onChangeSelectedDates, onClear, onContinue, onBack,
 }: CalendarPickerProps) {
   const count = selectedDates.length
@@ -152,7 +155,8 @@ export default function CalendarPicker({
     const d = dayjs(date as Date | Dayjs)
     const dow = d.day()
     const isWeekend = dow === 0 || dow === 6
-    const isDisabled = weekendsOnly && !isWeekend
+    const isPast = d.isBefore(dayjs(today), 'day')
+    const isDisabled = isPast || (weekendsOnly && !isWeekend)
     const isToday = d.isSame(dayjs(today), 'day')
     const isSelected = selectedDates.some(sd => dayjs(sd).isSame(d, 'day'))
 
@@ -222,7 +226,7 @@ export default function CalendarPicker({
         <div className="toggle-info">
           <span className="toggle-title">Weekends only</span>
           <span className="toggle-sub">
-            {weekendsOnly ? 'Only Sat & Sun are selectable' : 'All days enabled'}
+            {weekendsOnly ? 'Only future Sat & Sun are selectable' : 'Today and future days enabled'}
           </span>
         </div>
         <Switch
@@ -286,6 +290,19 @@ export default function CalendarPicker({
         }}
       />
 
+      {/* Explicitly allow people who cannot make any of the dates */}
+      <div className="no-availability-option">
+        <Checkbox
+          checked={noDatesAvailable}
+          onChange={onToggleNoDatesAvailable}
+          label="I’m not free on any dates"
+          description="Continue without selecting a date"
+          size="sm"
+          color="var(--accent-primary)"
+          aria-label="I’m not free on any dates"
+        />
+      </div>
+
       {/* Action bar */}
       <div className="action-bar">
         <div className="action-bar-left">
@@ -296,7 +313,7 @@ export default function CalendarPicker({
           )}
           <div className={`count-pill ${count === 0 ? 'empty' : ''}`}>
             <span className="count-badge">{count}</span>
-            <span>{count === 1 ? 'date' : 'dates'} picked</span>
+            <span>{count === 0 ? 'No dates available' : `${count === 1 ? 'date' : 'dates'} picked`}</span>
           </div>
           {count > 0 && (
             <button className="clear-btn" onClick={onClear} aria-label="Clear all selected dates">
@@ -307,7 +324,7 @@ export default function CalendarPicker({
         <button
           className="continue-btn action-bar-continue-btn"
           onClick={onContinue}
-          disabled={count === 0}
+          disabled={count === 0 && !noDatesAvailable}
           id="continue-btn"
         >
           See summary <span aria-hidden="true">→</span>

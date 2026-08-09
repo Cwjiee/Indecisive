@@ -146,7 +146,6 @@ export default function RoomView({ room, onAddDates, onGoHome, onEditParticipant
       {pendingFinalizeDate && (
         <div className="edit-disclaimer-overlay" onClick={() => setPendingFinalizeDate(null)}>
           <div className="edit-disclaimer-modal" onClick={e => e.stopPropagation()}>
-            <div className="edit-disclaimer-icon">🎉</div>
             <div className="edit-disclaimer-title">Confirm Final Hangout Date?</div>
             <div className="edit-disclaimer-body">
               Are you sure you want to set <strong>{DAY_SHORT[pendingFinalizeDate.getDay()]}, {SHORT_MONTH[pendingFinalizeDate.getMonth()]} {pendingFinalizeDate.getDate()}, {pendingFinalizeDate.getFullYear()}</strong> as the official date for this hangout?
@@ -156,7 +155,7 @@ export default function RoomView({ room, onAddDates, onGoHome, onEditParticipant
                 Cancel
               </button>
               <button className="continue-btn" onClick={handleConfirmFinalize} disabled={isFinalizing}>
-                {isFinalizing ? 'Saving…' : 'Lock in Date 🚀'}
+                {isFinalizing ? 'Saving…' : 'Lock in Date'}
               </button>
             </div>
           </div>
@@ -226,7 +225,6 @@ export default function RoomView({ room, onAddDates, onGoHome, onEditParticipant
         return (
           <div className="finalized-banner">
             <div className="finalized-header">
-              <span className="finalized-icon">🚀</span>
               <div>
                 <div className="finalized-title">It's Official! Hangout Date Locked In</div>
                 <div className="finalized-sub">Everyone prepare for</div>
@@ -238,7 +236,7 @@ export default function RoomView({ room, onAddDates, onGoHome, onEditParticipant
               <span className="finalized-month">{SHORT_MONTH[fDate.getMonth()]} {fDate.getFullYear()}</span>
             </div>
             <button className="regenerate-btn" onClick={handleClearFinalDecision} style={{ marginTop: '8px', color: 'var(--text-secondary)' }}>
-              ✏️ Re-open date selection
+              Re-open date selection
             </button>
           </div>
         )
@@ -248,7 +246,6 @@ export default function RoomView({ room, onAddDates, onGoHome, onEditParticipant
       {overlapDates.length > 0 && !room.finalDate && (
         <div className="overlap-section">
           <div className="overlap-header">
-            <span className="overlap-icon">✨</span>
             <div>
               <div className="overlap-title">Everyone's free on {overlapDates.length} {overlapDates.length === 1 ? 'date' : 'dates'}!</div>
               <div className="overlap-sub">Click a date below to lock it in as the final decision</div>
@@ -269,14 +266,6 @@ export default function RoomView({ room, onAddDates, onGoHome, onEditParticipant
               </button>
             ))}
           </div>
-        </div>
-      )}
-
-      {/* Fair use warning banner */}
-      {room.participants.length > 0 && (
-        <div className="room-disclaimer-banner">
-          <span className="room-disclaimer-icon">ℹ️</span>
-          <span>Only use the <strong>✏️ Edit</strong> button if you are that person modifying your own dates.</span>
         </div>
       )}
 
@@ -328,7 +317,6 @@ export default function RoomView({ room, onAddDates, onGoHome, onEditParticipant
             id="add-my-dates-btn"
             style={{ width: '100%' }}
           >
-            <span aria-hidden="true">📅</span>
             {currentUserParticipant ? 'Edit / Update my availability' : 'Add my availability'}
           </button>
         </div>
@@ -375,7 +363,7 @@ export default function RoomView({ room, onAddDates, onGoHome, onEditParticipant
                     style={{ padding: '3px 8px', fontSize: '11px', borderRadius: '4px' }}
                     aria-label={`Edit ${p.name}'s dates`}
                   >
-                    ✏️ Edit
+                    Edit
                   </button>
                 </div>
 
@@ -406,7 +394,6 @@ export default function RoomView({ room, onAddDates, onGoHome, onEditParticipant
                               <span className="p-chip-num" style={{ color: isOverlap ? color.fill : 'var(--text-primary)' }}>
                                 {date.getDate()}
                               </span>
-                              {isOverlap && <span className="p-chip-star">✨</span>}
                             </div>
                           )
                         })}
@@ -414,6 +401,11 @@ export default function RoomView({ room, onAddDates, onGoHome, onEditParticipant
                     </div>
                   )
                 })}
+                {dates.length === 0 && (
+                  <div style={{ color: 'var(--text-muted)', fontSize: '13px', fontStyle: 'italic' }}>
+                    Not available on any dates
+                  </div>
+                )}
               </div>
             )
           })}
@@ -423,7 +415,6 @@ export default function RoomView({ room, onAddDates, onGoHome, onEditParticipant
       {/* Navigation */}
       <div style={{ marginTop: '16px', display: 'flex', justifyContent: 'center' }}>
         <button className="back-btn" onClick={onGoHome} id="room-home-btn" style={{ width: '100%', maxWidth: '240px' }}>
-          <span aria-hidden="true">🏠</span>
           Go to Home
         </button>
       </div>

@@ -22,12 +22,22 @@ export default function PickerPage() {
   const [currentYear, setCurrentYear] = useState(today.getFullYear())
   const [currentMonth, setCurrentMonth] = useState(today.getMonth())
   const [weekendsOnly, setWeekendsOnly] = useState(false)
+  const [noDatesAvailable, setNoDatesAvailable] = useState(() => selectedDates.length === 0)
 
   // Persist dates to sessionStorage whenever they change
   const handleChangeDates = useCallback((dates: Date[]) => {
     setSelectedDates(dates)
+    if (dates.length > 0) setNoDatesAvailable(false)
     setStoredDates(roomCode, datesToStrings(dates))
   }, [roomCode])
+
+  const handleToggleNoDatesAvailable = useCallback(() => {
+    setNoDatesAvailable(prev => {
+      const next = !prev
+      if (next) handleChangeDates([])
+      return next
+    })
+  }, [handleChangeDates])
 
   const prevMonth = useCallback(() => {
     // Don't allow navigating before the current month
@@ -86,8 +96,13 @@ export default function PickerPage() {
       onPrevMonth={prevMonth}
       onNextMonth={nextMonth}
       onToggleWeekendsOnly={handleToggleWeekendsOnly}
+      noDatesAvailable={noDatesAvailable}
+      onToggleNoDatesAvailable={handleToggleNoDatesAvailable}
       onChangeSelectedDates={handleChangeDates}
-      onClear={() => handleChangeDates([])}
+      onClear={() => {
+        setNoDatesAvailable(true)
+        handleChangeDates([])
+      }}
       onContinue={handleContinue}
       onBack={handleBack}
     />

@@ -347,6 +347,26 @@ body {
 
 .count-badge { font-size: 15px; font-weight: 800; }
 
+.no-availability-option {
+  margin-top: 16px;
+  padding: 12px 14px;
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+}
+
+.no-availability-option .mantine-Checkbox-label {
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.no-availability-option .mantine-Checkbox-description {
+  color: var(--text-secondary);
+  font-size: 12px;
+  margin-top: 2px;
+}
+
 .clear-btn {
   background: none;
   border: none;

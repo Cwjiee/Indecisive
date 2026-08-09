@@ -157,9 +157,11 @@ export default function Summary({ dates, userName, preRoomCode, existingRoom, on
       {/* Header */}
       <div className="summary-header">
         <h1 className="summary-title">
-          You're free on {totalDates} {totalDates === 1 ? 'day' : 'days'}!
+          {totalDates === 0 ? 'No dates available' : `You're free on ${totalDates} ${totalDates === 1 ? 'day' : 'days'}!`}
         </h1>
-        <p className="summary-subtitle">Here's your availability at a glance</p>
+        <p className="summary-subtitle">
+          {totalDates === 0 ? 'You can update your availability later if your plans change.' : 'Here\'s your availability at a glance'}
+        </p>
       </div>
 
       {/* Date chips grouped by month */}
@@ -269,7 +271,6 @@ export default function Summary({ dates, userName, preRoomCode, existingRoom, on
             </button>
           )}
           <button className="back-btn" onClick={onGoHome} id="home-btn" style={{ flex: 1 }}>
-            <span aria-hidden="true">🏠</span>
             Home
           </button>
         </div>
