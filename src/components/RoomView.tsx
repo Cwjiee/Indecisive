@@ -124,7 +124,6 @@ export default function RoomView({ room, onAddDates, onGoHome, onEditParticipant
       {showDeleteModal && (
         <div className="edit-disclaimer-overlay" onClick={() => setShowDeleteModal(false)}>
           <div className="edit-disclaimer-modal" onClick={e => e.stopPropagation()}>
-            <div className="edit-disclaimer-icon">🗑️</div>
             <div className="edit-disclaimer-title">Delete this hangout?</div>
             <div className="edit-disclaimer-body">
               Are you sure you want to permanently delete <strong>{room.name || room.code}</strong>? This action cannot be undone.
@@ -139,7 +138,7 @@ export default function RoomView({ room, onAddDates, onGoHome, onEditParticipant
                 disabled={isDeleting}
                 style={{ background: '#b84040' }}
               >
-                {isDeleting ? 'Deleting…' : 'Delete Hangout 🗑️'}
+                {isDeleting ? 'Deleting…' : 'Delete Hangout'}
               </button>
             </div>
           </div>
@@ -238,7 +237,7 @@ export default function RoomView({ room, onAddDates, onGoHome, onEditParticipant
               }}
               title="Delete this hangout"
             >
-              🗑️ Delete
+              Delete
             </button>
           )}
         </div>
