@@ -705,6 +705,76 @@ body {
   color: var(--text-muted) !important;
 }
 
+/* ── Creator date-range picker ── */
+.create-date-range-picker {
+  color: var(--text-primary);
+  --mantine-color-text: var(--text-primary);
+  --mantine-color-dimmed: var(--text-secondary);
+  --mantine-color-gray-0: var(--bg-card-hover);
+  --mantine-color-gray-1: var(--bg-secondary);
+  --mantine-color-gray-4: var(--glass-border-hover);
+  --mantine-primary-color-filled: var(--accent-primary);
+  --mantine-primary-color-filled-hover: #754c30;
+  --mantine-primary-color-light: var(--accent-selected-soft);
+  --mantine-primary-color-light-hover: rgba(90, 138, 90, 0.18);
+}
+
+.create-date-range-picker .create-date-range-day {
+  color: var(--text-primary);
+  border-radius: var(--radius-sm);
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.create-date-range-picker .create-date-range-day:hover:not([data-disabled]):not([data-selected]) {
+  background: var(--bg-card-hover) !important;
+  color: var(--text-primary) !important;
+}
+
+.create-date-range-picker .create-date-range-day[data-weekend] {
+  color: var(--accent-weekend);
+}
+
+.create-date-range-picker .create-date-range-day[data-in-range] {
+  background: var(--accent-selected-soft) !important;
+  color: var(--text-primary) !important;
+}
+
+.create-date-range-picker .create-date-range-day[data-selected] {
+  background: var(--accent-primary) !important;
+  color: var(--bg-card) !important;
+  font-weight: 700;
+}
+
+.create-date-range-picker .create-date-range-day[data-selected]:hover {
+  background: #754c30 !important;
+  color: var(--bg-card) !important;
+}
+
+.create-date-range-picker .create-date-range-day[data-disabled] {
+  color: var(--text-disabled) !important;
+  opacity: 0.65;
+}
+
+.create-date-range-picker .create-date-range-weekday {
+  color: var(--text-secondary) !important;
+  font-weight: 700;
+}
+
+.create-date-range-picker .create-date-range-header-control,
+.create-date-range-picker .create-date-range-header-level {
+  color: var(--text-primary) !important;
+}
+
+.create-date-range-picker .create-date-range-header-control:hover,
+.create-date-range-picker .create-date-range-header-level:hover {
+  background: var(--bg-card-hover) !important;
+  color: var(--text-primary) !important;
+}
+
+.create-date-range-picker .create-date-range-header-control:disabled {
+  color: var(--text-disabled) !important;
+}
+
 .recent-rooms-section {
   display: flex;
   flex-direction: column;

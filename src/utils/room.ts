@@ -26,11 +26,17 @@ export interface Participant {
   dates: string[] // YYYYMMDD
 }
 
+export interface DateRange {
+  start: string // YYYYMMDD
+  end: string   // YYYYMMDD
+}
+
 export interface RoomData {
   code: string          // 6-char readable code, e.g. "K3M9PX"
   name?: string         // optional human-readable room name e.g. "Summer BBQ"
   creatorId?: string
   participants: Participant[]
+  dateRange?: DateRange // optional room-wide availability constraint
   finalDate?: string    // optional YYYYMMDD string for finalized hangout date
 }
 

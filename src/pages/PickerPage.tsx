@@ -1,7 +1,8 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import CalendarPicker from '../components/CalendarPicker'
-import { stringsToDate, datesToStrings } from '../utils/room'
+import { stringsToDate, datesToStrings, type DateRange } from '../utils/room'
+import { getRoomFromDb } from '../utils/db'
 import { getStoredDates, setStoredDates } from '../utils/session'
 
 export default function PickerPage() {
@@ -23,13 +24,52 @@ export default function PickerPage() {
   const [currentMonth, setCurrentMonth] = useState(today.getMonth())
   const [weekendsOnly, setWeekendsOnly] = useState(false)
   const [noDatesAvailable, setNoDatesAvailable] = useState(() => selectedDates.length === 0)
+  const [dateRange, setDateRange] = useState<DateRange | null>(null)
+
+  useEffect(() => {
+    if (roomCode === 'solo') return
+
+    getRoomFromDb(roomCode).then(room => {
+      const range = room?.dateRange ?? null
+      setDateRange(range)
+
+      if (range) {
+        const rangeStart = stringsToDate([range.start])[0]
+        const rangeEnd = stringsToDate([range.end])[0]
+        const currentMonthStart = new Date(currentYear, currentMonth, 1)
+        const rangeStartMonth = new Date(rangeStart.getFullYear(), rangeStart.getMonth(), 1)
+        const rangeEndMonth = new Date(rangeEnd.getFullYear(), rangeEnd.getMonth(), 1)
+
+        // Start users on the first constrained month instead of a month
+        // where every day is disabled.
+        if (currentMonthStart < rangeStartMonth || currentMonthStart > rangeEndMonth) {
+          setCurrentYear(rangeStart.getFullYear())
+          setCurrentMonth(rangeStart.getMonth())
+        }
+
+        const filtered = stringsToDate(getStoredDates(roomCode).filter(date => date >= range.start && date <= range.end))
+        setSelectedDates(filtered)
+        setStoredDates(roomCode, datesToStrings(filtered))
+        if (filtered.length === 0) setNoDatesAvailable(true)
+      }
+    }).catch(error => {
+      console.error('Error loading room date range:', error)
+    })
+  }, [roomCode])
+
+  const isDateInRange = useCallback((date: Date) => {
+    if (!dateRange) return true
+    const dateString = datesToStrings([date])[0]
+    return dateString >= dateRange.start && dateString <= dateRange.end
+  }, [dateRange])
 
   // Persist dates to sessionStorage whenever they change
   const handleChangeDates = useCallback((dates: Date[]) => {
-    setSelectedDates(dates)
-    if (dates.length > 0) setNoDatesAvailable(false)
-    setStoredDates(roomCode, datesToStrings(dates))
-  }, [roomCode])
+    const filtered = dates.filter(isDateInRange)
+    setSelectedDates(filtered)
+    if (filtered.length > 0) setNoDatesAvailable(false)
+    setStoredDates(roomCode, datesToStrings(filtered))
+  }, [roomCode, isDateInRange])
 
   const handleToggleNoDatesAvailable = useCallback(() => {
     setNoDatesAvailable(prev => {
@@ -97,6 +137,7 @@ export default function PickerPage() {
       onNextMonth={nextMonth}
       onToggleWeekendsOnly={handleToggleWeekendsOnly}
       noDatesAvailable={noDatesAvailable}
+      dateRange={dateRange}
       onToggleNoDatesAvailable={handleToggleNoDatesAvailable}
       onChangeSelectedDates={handleChangeDates}
       onClear={() => {

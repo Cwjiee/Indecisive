@@ -2,6 +2,7 @@ import { useRef, useEffect } from 'react'
 import { DatePicker } from '@mantine/dates'
 import { Checkbox, Switch } from '@mantine/core'
 import dayjs, { type Dayjs } from 'dayjs'
+import type { DateRange } from '../utils/room'
 
 const MONTH_NAMES = [
   'January','February','March','April','May','June',
@@ -19,6 +20,7 @@ interface CalendarPickerProps {
   onNextMonth: () => void
   onToggleWeekendsOnly: () => void
   noDatesAvailable: boolean
+  dateRange?: DateRange | null
   onToggleNoDatesAvailable: () => void
   onChangeSelectedDates: (dates: Date[]) => void
   onClear: () => void
@@ -31,6 +33,7 @@ export default function CalendarPicker({
   isPrevMonthDisabled,
   onPrevMonth, onNextMonth, onToggleWeekendsOnly,
   noDatesAvailable, onToggleNoDatesAvailable,
+  dateRange,
   onChangeSelectedDates, onClear, onContinue, onBack,
 }: CalendarPickerProps) {
   const count = selectedDates.length
@@ -156,7 +159,9 @@ export default function CalendarPicker({
     const dow = d.day()
     const isWeekend = dow === 0 || dow === 6
     const isPast = d.isBefore(dayjs(today), 'day')
-    const isDisabled = isPast || (weekendsOnly && !isWeekend)
+    const dateKey = d.format('YYYYMMDD')
+    const isOutsideRange = Boolean(dateRange && (dateKey < dateRange.start || dateKey > dateRange.end))
+    const isDisabled = isPast || isOutsideRange || (weekendsOnly && !isWeekend)
     const isToday = d.isSame(dayjs(today), 'day')
     const isSelected = selectedDates.some(sd => dayjs(sd).isSame(d, 'day'))
 
@@ -260,6 +265,8 @@ export default function CalendarPicker({
         onChange={handleChange}
         date={displayMonth}
         getDayProps={getDayProps}
+        minDate={dateRange ? dayjs(dateRange.start, 'YYYYMMDD').format('YYYY-MM-DD') : undefined}
+        maxDate={dateRange ? dayjs(dateRange.end, 'YYYYMMDD').format('YYYY-MM-DD') : undefined}
         hideOutsideDates
         firstDayOfWeek={0}
         size="sm"
@@ -289,6 +296,12 @@ export default function CalendarPicker({
           },
         }}
       />
+
+      {dateRange && (
+        <div className="toggle-sub" style={{ marginTop: '10px', textAlign: 'center' }}>
+          Room date range: {dayjs(dateRange.start, 'YYYYMMDD').format('D MMM YYYY')} – {dayjs(dateRange.end, 'YYYYMMDD').format('D MMM YYYY')}
+        </div>
+      )}
 
       {/* Explicitly allow people who cannot make any of the dates */}
       <div className="no-availability-option">
