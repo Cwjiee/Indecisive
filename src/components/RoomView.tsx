@@ -16,6 +16,25 @@ const MONTH_NAMES = [
 const DAY_SHORT = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
 const SHORT_MONTH = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
 
+function buildGoogleCalendarUrl(dateStr: string, roomName: string, roomCode: string, participantNames: string[]): string {
+  const y = dateStr.slice(0, 4)
+  const m = dateStr.slice(4, 6)
+  const d = dateStr.slice(6, 8)
+
+  // End date = next day (Google Calendar all-day events are exclusive of end date)
+  const startDate = new Date(Number(y), Number(m) - 1, Number(d))
+  const endDate = new Date(startDate)
+  endDate.setDate(endDate.getDate() + 1)
+  const endStr = `${endDate.getFullYear()}${String(endDate.getMonth() + 1).padStart(2, '0')}${String(endDate.getDate()).padStart(2, '0')}`
+
+  const title = encodeURIComponent(roomName || `Hangout (${roomCode})`)
+  const details = encodeURIComponent(
+    `Hangout organized on Indecisive \nAttendees: ${participantNames.join(', ')}\n`
+  )
+
+  return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${dateStr}/${endStr}&details=${details}`
+}
+
 interface RoomViewProps {
   room: RoomData
   onAddDates: () => void
@@ -252,6 +271,12 @@ export default function RoomView({ room, onAddDates, onGoHome, onEditParticipant
       {/* Finalized Banner if date is locked in */}
       {room.finalDate && (() => {
         const fDate = stringsToDate([room.finalDate])[0]
+        const calendarUrl = buildGoogleCalendarUrl(
+          room.finalDate,
+          room.name || '',
+          room.code,
+          room.participants.map(p => p.name)
+        )
         return (
           <div className="finalized-banner">
             <div className="finalized-header">
@@ -265,6 +290,15 @@ export default function RoomView({ room, onAddDates, onGoHome, onEditParticipant
               <span className="finalized-day-num">{fDate.getDate()}</span>
               <span className="finalized-month">{SHORT_MONTH[fDate.getMonth()]} {fDate.getFullYear()}</span>
             </div>
+            <a
+              href={calendarUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="continue-btn"
+              style={{ marginTop: '12px', display: 'inline-flex', alignItems: 'center', gap: '6px', textDecoration: 'none', justifyContent: 'center' }}
+            >
+              <span aria-hidden="true">📅</span> Add to Google Calendar
+            </a>
             <button className="regenerate-btn" onClick={() => setShowReopenModal(true)} style={{ marginTop: '8px', color: 'var(--text-secondary)' }}>
               Re-open date selection
             </button>
