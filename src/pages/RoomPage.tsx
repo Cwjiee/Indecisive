@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import RoomView from '../components/RoomView'
 import { subscribeToRoom, saveRoomToHistory } from '../utils/db'
-import type { RoomData } from '../utils/room'
-import { setStoredName, setStoredDates } from '../utils/session'
+import type { RoomData, BusyTimes } from '../utils/room'
+import { setStoredName, setStoredDates, setStoredBusyTimes } from '../utils/session'
 
 export default function RoomPage() {
   const { code } = useParams<{ code: string }>()
@@ -66,10 +66,11 @@ export default function RoomPage() {
     navigate(`/pick/${room.code}`)
   }
 
-  const handleEditParticipant = (name: string, dateStrs: string[]) => {
+  const handleEditParticipant = (name: string, dateStrs: string[], busyTimes?: BusyTimes) => {
     // Pre-populate the session for the picker
     setStoredName(name)
     setStoredDates(room.code, dateStrs)
+    setStoredBusyTimes(room.code, busyTimes ?? {})
     navigate(`/pick/${room.code}?user=${encodeURIComponent(name)}`)
   }
 

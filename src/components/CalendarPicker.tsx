@@ -2,7 +2,7 @@ import { useRef, useEffect } from 'react'
 import { DatePicker } from '@mantine/dates'
 import { Checkbox, Switch } from '@mantine/core'
 import dayjs, { type Dayjs } from 'dayjs'
-import type { DateRange } from '../utils/room'
+import type { DateRange, BusyTimes } from '../utils/room'
 
 const MONTH_NAMES = [
   'January','February','March','April','May','June',
@@ -21,8 +21,10 @@ interface CalendarPickerProps {
   onToggleWeekendsOnly: () => void
   noDatesAvailable: boolean
   dateRange?: DateRange | null
+  busyTimes: BusyTimes
   onToggleNoDatesAvailable: () => void
   onChangeSelectedDates: (dates: Date[]) => void
+  onChangeBusyTime: (date: string, field: 'start' | 'end', time: string) => void
   onClear: () => void
   onContinue: () => void
   onBack?: () => void
@@ -33,10 +35,17 @@ export default function CalendarPicker({
   isPrevMonthDisabled,
   onPrevMonth, onNextMonth, onToggleWeekendsOnly,
   noDatesAvailable, onToggleNoDatesAvailable,
-  dateRange,
+  dateRange, busyTimes, onChangeBusyTime,
   onChangeSelectedDates, onClear, onContinue, onBack,
 }: CalendarPickerProps) {
   const count = selectedDates.length
+  const sortedSelectedDates = [...selectedDates].sort((a, b) => a.getTime() - b.getTime())
+  const hasBusyTimeErrors = sortedSelectedDates.some(date => {
+    const range = busyTimes[dayjs(date).format('YYYYMMDD')]
+    if (!range) return false
+    const { start, end } = range
+    return Boolean((start && !end) || (!start && end) || (start && end && end <= start))
+  })
 
   // Drag selection state
   const isDragging = useRef(false)
@@ -303,6 +312,75 @@ export default function CalendarPicker({
         </div>
       )}
 
+      {/* Optional busy-time range per selected date */}
+      {count > 0 && (
+        <div className="time-selection">
+          <div className="section-label" style={{ marginBottom: '4px' }}>
+            When are you not free? <span className="optional-label">(optional)</span>
+          </div>
+          <div className="time-selection-hint">
+            Add the time range you’re unavailable on a date. Leave both fields blank if you’re free all day.
+          </div>
+          <div className="time-list">
+            {sortedSelectedDates.map(date => {
+              const serialized = dayjs(date).format('YYYYMMDD')
+              const range = busyTimes[serialized]
+              const start = range?.start ?? ''
+              const end = range?.end ?? ''
+              const hasValue = Boolean(start || end)
+              const hasPartialRange = Boolean((start && !end) || (!start && end))
+              const hasInvalidRange = Boolean(start && end && end <= start)
+              const hasError = hasPartialRange || hasInvalidRange
+              const dateLabel = dayjs(date).format('ddd, D MMM YYYY')
+              return (
+                <div className={`time-row ${hasError ? 'has-error' : ''}`} key={serialized}>
+                  <span className="time-row-date">{dateLabel}</span>
+                  <div className="time-row-control">
+                    <input
+                      type="time"
+                      className="time-input"
+                      value={start}
+                      onChange={e => onChangeBusyTime(serialized, 'start', e.target.value)}
+                      aria-label={`Not free from on ${dateLabel}`}
+                      title="Not free from"
+                    />
+                    <span className="time-range-separator" aria-hidden="true">–</span>
+                    <input
+                      type="time"
+                      className="time-input"
+                      value={end}
+                      onChange={e => onChangeBusyTime(serialized, 'end', e.target.value)}
+                      aria-label={`Not free until on ${dateLabel}`}
+                      title="Not free until"
+                    />
+                    {hasValue && (
+                      <button
+                        type="button"
+                        className="time-clear-btn"
+                        onClick={() => {
+                          onChangeBusyTime(serialized, 'start', '')
+                          onChangeBusyTime(serialized, 'end', '')
+                        }}
+                        aria-label={`Clear busy time for ${dateLabel}`}
+                      >
+                        ×
+                      </button>
+                    )}
+                  </div>
+                  {hasError && (
+                    <span className="time-range-error">
+                      {hasPartialRange
+                        ? 'Add both a start and end time, or clear this range.'
+                        : 'End time must be after start time.'}
+                    </span>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Explicitly allow people who cannot make any of the dates */}
       <div className="no-availability-option">
         <Checkbox
@@ -337,8 +415,9 @@ export default function CalendarPicker({
         <button
           className="continue-btn action-bar-continue-btn"
           onClick={onContinue}
-          disabled={count === 0 && !noDatesAvailable}
+          disabled={(count === 0 && !noDatesAvailable) || hasBusyTimeErrors}
           id="continue-btn"
+          title={hasBusyTimeErrors ? 'Fix or clear the incomplete busy time ranges first' : undefined}
         >
           See summary <span aria-hidden="true">→</span>
         </button>

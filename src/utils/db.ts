@@ -1,6 +1,6 @@
 import { db } from '../firebase';
 import { doc, setDoc, getDoc, updateDoc, deleteDoc, arrayUnion, onSnapshot, collection, getDocs } from 'firebase/firestore';
-import { type RoomData, type Participant, generateRoomCode } from './room';
+import { type RoomData, type Participant, type BusyTimes, generateRoomCode } from './room';
 
 /**
  * Creates a new room document in Firestore.
@@ -10,7 +10,8 @@ export async function createRoomInDb(
   creatorName: string,
   dates: string[],
   preRoomCode: string | null,
-  userInfo?: { userId?: string; userEmail?: string }
+  userInfo?: { userId?: string; userEmail?: string },
+  busyTimes?: BusyTimes
 ): Promise<string> {
   const code = (preRoomCode || generateRoomCode()).toUpperCase();
   const roomRef = doc(db, 'rooms', code);
@@ -18,6 +19,7 @@ export async function createRoomInDb(
   const creatorParticipant: Participant = {
     name: creatorName,
     dates,
+    ...(busyTimes && Object.keys(busyTimes).length > 0 && { busyTimes }),
     ...(userInfo?.userId && { userId: userInfo.userId }),
     ...(userInfo?.userEmail && { userEmail: userInfo.userEmail }),
   };
@@ -43,13 +45,15 @@ export async function joinRoomInDb(
   roomCode: string,
   participantName: string,
   dates: string[],
-  userInfo?: { userId?: string; userEmail?: string }
+  userInfo?: { userId?: string; userEmail?: string },
+  busyTimes?: BusyTimes
 ): Promise<void> {
   const code = roomCode.toUpperCase();
   const roomRef = doc(db, 'rooms', code);
   const newParticipant: Participant = {
     name: participantName,
     dates,
+    ...(busyTimes && Object.keys(busyTimes).length > 0 && { busyTimes }),
     ...(userInfo?.userId && { userId: userInfo.userId }),
     ...(userInfo?.userEmail && { userEmail: userInfo.userEmail }),
   };

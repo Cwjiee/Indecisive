@@ -1,10 +1,13 @@
 import { useState } from 'react'
+import { Tooltip } from '@mantine/core'
 import {
   type RoomData,
+  type BusyTimes,
   PARTICIPANT_COLORS,
   getOverlapDates,
   stringsToDate,
   datesToStrings,
+  formatBusyRange,
 } from '../utils/room'
 import { getStoredName, setStoredName } from '../utils/session'
 import { finalizeRoomDateInDb, deleteRoomFromDb } from '../utils/db'
@@ -39,7 +42,7 @@ interface RoomViewProps {
   room: RoomData
   onAddDates: () => void
   onGoHome: () => void
-  onEditParticipant: (name: string, dates: string[]) => void
+  onEditParticipant: (name: string, dates: string[], busyTimes?: BusyTimes) => void
 }
 
 import { useAuth } from '../context/AuthContext'
@@ -47,7 +50,7 @@ import { useAuth } from '../context/AuthContext'
 export default function RoomView({ room, onAddDates, onGoHome, onEditParticipant }: RoomViewProps) {
   const { user } = useAuth()
   const [userName, setUserName] = useState(() => getStoredName() || user?.displayName || '')
-  const [pendingEdit, setPendingEdit] = useState<{ name: string; dates: string[] } | null>(null)
+  const [pendingEdit, setPendingEdit] = useState<{ name: string; dates: string[]; busyTimes?: BusyTimes } | null>(null)
   
   // Final Decision state
   const [pendingFinalizeDate, setPendingFinalizeDate] = useState<Date | null>(null)
@@ -78,20 +81,20 @@ export default function RoomView({ room, onAddDates, onGoHome, onEditParticipant
     onAddDates()
   }
 
-  const handleEditParticipantClick = (p: { name: string; dates: string[]; userId?: string }) => {
+  const handleEditParticipantClick = (p: { name: string; dates: string[]; busyTimes?: BusyTimes; userId?: string }) => {
     const isSelf = (user && p.userId === user.uid) || (userName && p.name.toLowerCase() === userName.toLowerCase())
     if (isSelf) {
       // Direct edit without modal for own dates
-      onEditParticipant(p.name, p.dates)
+      onEditParticipant(p.name, p.dates, p.busyTimes)
     } else {
       // Warning modal for editing someone else's dates
-      setPendingEdit({ name: p.name, dates: p.dates })
+      setPendingEdit({ name: p.name, dates: p.dates, busyTimes: p.busyTimes })
     }
   }
 
   const handleConfirmEdit = () => {
     if (!pendingEdit) return
-    onEditParticipant(pendingEdit.name, pendingEdit.dates)
+    onEditParticipant(pendingEdit.name, pendingEdit.dates, pendingEdit.busyTimes)
     setPendingEdit(null)
   }
 
@@ -433,35 +436,65 @@ export default function RoomView({ room, onAddDates, onGoHome, onEditParticipant
 
                 {Array.from(byMonth.entries()).map(([key, mDates]) => {
                   const [y, m] = key.split('-').map(Number)
+                  const monthDates = mDates.map(date => {
+                    const dateKey = `${date.getFullYear()}${String(date.getMonth()+1).padStart(2,'0')}${String(date.getDate()).padStart(2,'0')}`
+                    return {
+                      date,
+                      dateKey,
+                      isOverlap: overlap.has(dateKey),
+                      busyLabel: formatBusyRange(p.busyTimes?.[dateKey]),
+                    }
+                  })
+                  const monthBusyEntries = monthDates.filter(item => item.busyLabel)
+
                   return (
                     <div key={key} className="participant-month-group">
                       <div className="participant-month-label">
                         {MONTH_NAMES[m]} {y}
                       </div>
                       <div className="participant-date-chips">
-                        {mDates.map(date => {
-                          const isOverlap = overlap.has(
-                            `${date.getFullYear()}${String(date.getMonth()+1).padStart(2,'0')}${String(date.getDate()).padStart(2,'0')}`
-                          )
-                          return (
+                        {monthDates.map(({ date, isOverlap, busyLabel }) => (
+                          <Tooltip
+                            key={date.toISOString()}
+                            label={busyLabel ? `Not free ${busyLabel}` : ''}
+                            disabled={!busyLabel}
+                            withArrow
+                            events={{ hover: true, focus: true, touch: true }}
+                            position="top"
+                            openDelay={150}
+                            closeDelay={100}
+                            withinPortal
+                          >
                             <div
-                              key={date.toISOString()}
                               className={`participant-chip ${isOverlap ? 'is-overlap' : ''}`}
                               style={{
                                 borderColor: isOverlap ? color.fill : 'var(--glass-border)',
                                 background: isOverlap ? color.soft : 'var(--bg-card)',
                                 color: isOverlap ? color.fill : 'var(--text-secondary)',
                               }}
-                              title={isOverlap ? 'Everyone is free!' : undefined}
+                              title={!busyLabel && isOverlap ? 'Everyone is free!' : undefined}
+                              tabIndex={busyLabel ? 0 : undefined}
+                              aria-label={busyLabel ? `Not free ${busyLabel}` : undefined}
                             >
                               <span className="p-chip-day">{DAY_SHORT[date.getDay()]}</span>
                               <span className="p-chip-num" style={{ color: isOverlap ? color.fill : 'var(--text-primary)' }}>
                                 {date.getDate()}
                               </span>
+                              {busyLabel && <span className="p-chip-busy-dot" aria-hidden="true" />}
                             </div>
-                          )
-                        })}
+                          </Tooltip>
+                        ))}
                       </div>
+                      {monthBusyEntries.length > 0 && (
+                        <div className="participant-busy-summary">
+                          <span className="participant-busy-summary-label">Busy</span>
+                          {monthBusyEntries.map(({ date, busyLabel }) => (
+                            <span key={date.toISOString()} className="participant-busy-summary-item">
+                              {SHORT_MONTH[date.getMonth()]} {date.getDate()} · {busyLabel}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   )
                 })}

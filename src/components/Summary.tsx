@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import ShareCard from './ShareCard'
-import type { RoomData } from '../utils/room'
-import { datesToStrings } from '../utils/room'
+import type { RoomData, BusyTimes } from '../utils/room'
+import { datesToStrings, formatBusyRange } from '../utils/room'
 import { createRoomInDb, updateRoomParticipantsInDb, buildDbShareUrl, saveRoomToHistory } from '../utils/db'
 
 const MONTH_NAMES = [
@@ -13,6 +13,7 @@ const DAY_NAMES_SHORT = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
 
 interface SummaryProps {
   dates: Date[]
+  busyTimes: BusyTimes
   userName: string
   preRoomCode: string | null
   existingRoom: RoomData | null
@@ -52,7 +53,7 @@ function groupByMonth(dates: Date[]): MonthGroup[] {
 
 import { useAuth } from '../context/AuthContext'
 
-export default function Summary({ dates, userName, preRoomCode, existingRoom, onBack, onGoHome, onViewRoom }: SummaryProps) {
+export default function Summary({ dates, busyTimes, userName, preRoomCode, existingRoom, onBack, onGoHome, onViewRoom }: SummaryProps) {
   const { user } = useAuth()
   const groups = groupByMonth(dates)
   const totalDates   = dates.length
@@ -85,6 +86,7 @@ export default function Summary({ dates, userName, preRoomCode, existingRoom, on
           const newParticipantData = {
             name: userName,
             dates: serialized,
+            ...(Object.keys(busyTimes).length > 0 && { busyTimes }),
             ...(user && { userId: user.uid, userEmail: user.email || undefined }),
           }
 
@@ -97,7 +99,7 @@ export default function Summary({ dates, userName, preRoomCode, existingRoom, on
           await updateRoomParticipantsInDb(existingRoom.code, updatedParticipants)
         } else {
           // Overwrites the empty room with the creator's selection
-          await createRoomInDb(userName, serialized, preRoomCode, userInfo)
+          await createRoomInDb(userName, serialized, preRoomCode, userInfo, busyTimes)
         }
         saveRoomToHistory(activeRoomCode!)
         setSavedCode(activeRoomCode)
@@ -110,7 +112,7 @@ export default function Summary({ dates, userName, preRoomCode, existingRoom, on
     }
 
     autoSaveAvailability()
-  }, [activeRoomCode, userName, dates, existingRoom, preRoomCode, user])
+  }, [activeRoomCode, userName, dates, busyTimes, existingRoom, preRoomCode, user])
 
   const shareUrl = savedCode ? buildDbShareUrl(savedCode) : ''
 
@@ -132,15 +134,21 @@ export default function Summary({ dates, userName, preRoomCode, existingRoom, on
           p => p.name.toLowerCase() === userName.toLowerCase()
         )
 
+        const participantData = {
+          name: userName,
+          dates: serialized,
+          ...(Object.keys(busyTimes).length > 0 && { busyTimes }),
+        }
+
         if (existingIdx !== -1) {
-          updatedParticipants[existingIdx] = { name: userName, dates: serialized }
+          updatedParticipants[existingIdx] = participantData
         } else {
-          updatedParticipants.push({ name: userName, dates: serialized })
+          updatedParticipants.push(participantData)
         }
 
         await updateRoomParticipantsInDb(existingRoom.code, updatedParticipants)
       } else {
-        await createRoomInDb(userName, serialized, preRoomCode)
+        await createRoomInDb(userName, serialized, preRoomCode, undefined, busyTimes)
       }
       saveRoomToHistory(activeRoomCode!)
       setSavedCode(activeRoomCode)
@@ -176,6 +184,7 @@ export default function Summary({ dates, userName, preRoomCode, existingRoom, on
             {group.dates.map((date, i) => {
               const dow  = date.getDay()
               const wknd = isWeekend(date)
+              const busyLabel = formatBusyRange(busyTimes[datesToStrings([date])[0]])
               return (
                 <div
                   key={date.toISOString()}
@@ -186,7 +195,10 @@ export default function Summary({ dates, userName, preRoomCode, existingRoom, on
                   <span className="chip-day-name">{DAY_NAMES_SHORT[dow]}</span>
                   <span className="chip-day-num">{date.getDate()}</span>
                   <span className="chip-month">{SHORT_MONTH[date.getMonth()]}</span>
-                  {wknd && <span className="chip-weekend-badge">Weekend</span>}
+                  <div className="summary-chip-meta">
+                    {busyLabel && <span className="chip-time">Busy {busyLabel}</span>}
+                    {wknd && <span className="chip-weekend-badge">Weekend</span>}
+                  </div>
                 </div>
               )
             })}
@@ -254,6 +266,7 @@ export default function Summary({ dates, userName, preRoomCode, existingRoom, on
         ) : (
           <ShareCard
             myDates={dates}
+            myBusyTimes={busyTimes}
             existingRoom={existingRoom}
             defaultName={userName}
             preRoomCode={preRoomCode}

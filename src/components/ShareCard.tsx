@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { TextInput } from '@mantine/core'
 import {
   type RoomData,
+  type BusyTimes,
   datesToStrings,
 } from '../utils/room'
 import {
@@ -12,6 +13,7 @@ import {
 
 interface ShareCardProps {
   myDates: Date[]
+  myBusyTimes?: BusyTimes
   existingRoom: RoomData | null
   /** Name collected on the setup page — pre-fills the input */
   defaultName?: string
@@ -19,7 +21,7 @@ interface ShareCardProps {
   preRoomCode?: string | null
 }
 
-export default function ShareCard({ myDates, existingRoom, defaultName = '', preRoomCode }: ShareCardProps) {
+export default function ShareCard({ myDates, myBusyTimes = {}, existingRoom, defaultName = '', preRoomCode }: ShareCardProps) {
   const [name, setName] = useState(defaultName)
   const [generated, setGenerated] = useState<{ url: string; code: string } | null>(null)
   const [copied, setCopied] = useState(false)
@@ -34,11 +36,11 @@ export default function ShareCard({ myDates, existingRoom, defaultName = '', pre
       let code: string
       if (existingRoom) {
         // Update database with new participant
-        await joinRoomInDb(existingRoom.code, displayName, serializedDates)
+        await joinRoomInDb(existingRoom.code, displayName, serializedDates, undefined, myBusyTimes)
         code = existingRoom.code
       } else {
         // Create database entry for new room
-        code = await createRoomInDb(displayName, serializedDates, preRoomCode ?? null)
+        code = await createRoomInDb(displayName, serializedDates, preRoomCode ?? null, undefined, myBusyTimes)
       }
 
       setGenerated({ url: buildDbShareUrl(code), code })

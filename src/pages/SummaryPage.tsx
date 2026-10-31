@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { getRoomFromDb } from '../utils/db'
-import { stringsToDate } from '../utils/room'
-import { getStoredName, getStoredDates } from '../utils/session'
+import { stringsToDate, getValidBusyTimes, pruneBusyTimes } from '../utils/room'
+import { getStoredName, getStoredDates, getStoredBusyTimes } from '../utils/session'
 import Summary from '../components/Summary'
 import type { RoomData } from '../utils/room'
 
@@ -15,6 +15,10 @@ export default function SummaryPage() {
   const userName = getStoredName() || 'You'
   const dateStrs = getStoredDates(roomCode)
   const dates = stringsToDate(dateStrs).sort((a, b) => a.getTime() - b.getTime())
+  const busyTimes = useMemo(() => {
+    const stored = getStoredBusyTimes(roomCode)
+    return pruneBusyTimes(getValidBusyTimes(stored), getStoredDates(roomCode))
+  }, [roomCode])
 
   const [existingRoom, setExistingRoom] = useState<RoomData | null>(null)
   const [loadingRoom, setLoadingRoom] = useState(!isSolo)
@@ -39,6 +43,7 @@ export default function SummaryPage() {
   return (
     <Summary
       dates={dates}
+      busyTimes={busyTimes}
       userName={userName}
       preRoomCode={isSolo ? null : roomCode}
       existingRoom={existingRoom}

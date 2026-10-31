@@ -17,6 +17,65 @@ export function stringsToDate(strs: string[]): Date[] {
   })
 }
 
+/** Formats a stored HH:mm time as a friendly 12-hour label (e.g. "7:30 PM"). */
+export function formatTimeLabel(time?: string | null): string {
+  if (!time) return ''
+  const [hours, minutes] = time.split(':').map(Number)
+  if (Number.isNaN(hours) || Number.isNaN(minutes)) return time
+  const suffix = hours < 12 ? 'AM' : 'PM'
+  const hour12 = hours % 12 || 12
+  return `${hour12}:${String(minutes).padStart(2, '0')} ${suffix}`
+}
+
+/** A busy window within a single day, using HH:mm 24-hour values. */
+export interface BusyTimeRange {
+  start: string
+  end: string
+}
+
+/** Optional per-date busy windows, keyed by YYYYMMDD (e.g. "20260915"). */
+export type BusyTimes = Record<string, BusyTimeRange>
+
+export function isValidBusyRange(range?: BusyTimeRange | null): boolean {
+  return Boolean(range?.start && range?.end && range.start < range.end)
+}
+
+function splitTimeValue(time: string): { label: string; suffix: string } {
+  const [hours, minutes] = time.split(':').map(Number)
+  const suffix = hours < 12 ? 'AM' : 'PM'
+  const hour12 = hours % 12 || 12
+  const label = minutes === 0 ? String(hour12) : `${hour12}:${String(minutes).padStart(2, '0')}`
+  return { label, suffix }
+}
+
+/** Formats a busy range compactly for display (e.g. "7:30–9 PM"). */
+export function formatBusyRange(range?: BusyTimeRange | null): string {
+  if (!isValidBusyRange(range)) return ''
+  const start = splitTimeValue(range!.start)
+  const end = splitTimeValue(range!.end)
+  const startLabel = start.suffix === end.suffix ? start.label : `${start.label} ${start.suffix}`
+  return `${startLabel}–${end.label} ${end.suffix}`
+}
+
+/** Keeps busy-time drafts only for dates that are still selected. */
+export function pruneBusyTimes(busyTimes: BusyTimes, dates: string[]): BusyTimes {
+  const allowed = new Set(dates)
+  const next: BusyTimes = {}
+  for (const [date, range] of Object.entries(busyTimes)) {
+    if (allowed.has(date) && (range.start || range.end)) next[date] = range
+  }
+  return next
+}
+
+/** Returns only complete, valid busy ranges ready for saving to Firestore. */
+export function getValidBusyTimes(busyTimes: BusyTimes): BusyTimes {
+  const next: BusyTimes = {}
+  for (const [date, range] of Object.entries(busyTimes)) {
+    if (isValidBusyRange(range)) next[date] = range
+  }
+  return next
+}
+
 // ── Room data types ───────────────────────────────────────────────────────────
 
 export interface Participant {
@@ -24,6 +83,7 @@ export interface Participant {
   userEmail?: string
   name: string
   dates: string[] // YYYYMMDD
+  busyTimes?: BusyTimes // optional windows when the participant is NOT free
 }
 
 export interface DateRange {

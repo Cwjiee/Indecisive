@@ -1,9 +1,9 @@
 import { useState, useCallback, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import CalendarPicker from '../components/CalendarPicker'
-import { stringsToDate, datesToStrings, type DateRange } from '../utils/room'
+import { stringsToDate, datesToStrings, pruneBusyTimes, type DateRange, type BusyTimes } from '../utils/room'
 import { getRoomFromDb } from '../utils/db'
-import { getStoredDates, setStoredDates } from '../utils/session'
+import { getStoredDates, setStoredDates, getStoredBusyTimes, setStoredBusyTimes } from '../utils/session'
 
 export default function PickerPage() {
   const { code } = useParams<{ code: string }>()
@@ -20,11 +20,22 @@ export default function PickerPage() {
     return stringsToDate(strs)
   })
 
+  const [busyTimes, setBusyTimes] = useState<BusyTimes>(() => getStoredBusyTimes(roomCode))
   const [currentYear, setCurrentYear] = useState(today.getFullYear())
   const [currentMonth, setCurrentMonth] = useState(today.getMonth())
   const [weekendsOnly, setWeekendsOnly] = useState(false)
   const [noDatesAvailable, setNoDatesAvailable] = useState(() => selectedDates.length === 0)
   const [dateRange, setDateRange] = useState<DateRange | null>(null)
+
+  // Drop busy-time drafts for dates that are no longer selected, then persist to session.
+  useEffect(() => {
+    const dateStrs = datesToStrings(selectedDates)
+    setBusyTimes(prev => pruneBusyTimes(prev, dateStrs))
+  }, [selectedDates])
+
+  useEffect(() => {
+    setStoredBusyTimes(roomCode, busyTimes)
+  }, [roomCode, busyTimes])
 
   useEffect(() => {
     if (roomCode === 'solo') return
@@ -92,9 +103,26 @@ export default function PickerPage() {
     else setCurrentMonth(m => m + 1)
   }, [currentMonth])
 
+  const handleChangeBusyTime = useCallback((date: string, field: 'start' | 'end', time: string) => {
+    setBusyTimes(prev => {
+      const current = prev[date] ?? { start: '', end: '' }
+      const nextRange = { ...current, [field]: time }
+
+      if (!nextRange.start && !nextRange.end) {
+        const next = { ...prev }
+        delete next[date]
+        return next
+      }
+
+      return { ...prev, [date]: nextRange }
+    })
+  }, [])
+
   const handleContinue = () => {
-    // Ensure the latest dates are written before navigating
-    setStoredDates(roomCode, datesToStrings(selectedDates))
+    // Ensure the latest dates and busy times are written before navigating
+    const dateStrs = datesToStrings(selectedDates)
+    setStoredDates(roomCode, dateStrs)
+    setStoredBusyTimes(roomCode, pruneBusyTimes(busyTimes, dateStrs))
     if (roomCode === 'solo') {
       navigate('/summary/solo')
     } else {
@@ -138,8 +166,10 @@ export default function PickerPage() {
       onToggleWeekendsOnly={handleToggleWeekendsOnly}
       noDatesAvailable={noDatesAvailable}
       dateRange={dateRange}
+      busyTimes={busyTimes}
       onToggleNoDatesAvailable={handleToggleNoDatesAvailable}
       onChangeSelectedDates={handleChangeDates}
+      onChangeBusyTime={handleChangeBusyTime}
       onClear={() => {
         setNoDatesAvailable(true)
         handleChangeDates([])
